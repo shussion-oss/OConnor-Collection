@@ -354,7 +354,7 @@
     const up = e.target.closest('[data-update-value]');
     if (!up) return;
     const c = state.cards.find((x) => x.id === up.dataset.updateValue);
-    const v = prompt(`What's ${c.player} worth today? ($)\nTip: check "Recent sales" to see what it sold for on eBay.`, c.estValue ?? '');
+    const v = await D.ask({ title: `What's ${c.player} worth today?`, message: 'Tip: tap “Recent sales” to see what this card actually sold for on eBay.', input: { value: c.estValue ?? '' }, ok: 'Save value' });
     if (v === null) return;
     const value = Number(String(v).replace(/[$,]/g, ''));
     if (!isFinite(value) || value < 0) return toast('Please enter a dollar amount.');
@@ -488,7 +488,7 @@
     const description = $('#sellDesc').value.trim();
     const startingBid = Number($('#sellBid').value);
     if (!(startingBid >= 0.99)) return toast('Starting bid must be at least $0.99.');
-    if (!confirm(`List "${title}" on eBay with a $${startingBid.toFixed(2)} starting bid?`)) return;
+    if (!(await D.ask({ title: 'List it on eBay?', message: `"${title}" with a $${startingBid.toFixed(2)} starting bid.`, ok: 'List it' }))) return;
     const btn = $('#directListBtn');
     btn.disabled = true;
     out.textContent = 'Listing on eBay… this can take up to a minute.';
@@ -600,7 +600,7 @@
         return;
       }
       const sd = t.closest('[data-set-del]');
-      if (sd && confirm('Remove this set checklist? (Your cards stay put.)')) {
+      if (sd && (await D.ask({ title: 'Remove this set checklist?', message: 'Your cards stay put.', ok: 'Remove', danger: true }))) {
         ex.sets = ex.sets.filter((s) => s.id !== sd.dataset.setDel); await saveSets(); renderSets();
       }
       if (t.closest('#statsDialog [data-pocket]')) $('#statsDialog').close();

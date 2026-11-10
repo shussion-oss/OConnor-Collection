@@ -463,3 +463,9 @@ h3.sub { font-size: 15px; margin: 18px 0 6px; }
   .search-row .view-toggle button { flex: 1; padding: 10px; }
   .search-row select { flex: 1 1 100%; }
 }
+
+/* in-page confirm / prompt */
+.dialog.ask { width: min(420px, 92vw); }
+.ask-title { margin: 0 0 6px; font-family: var(--display); font-weight: 400; font-size: 22px; color: var(--field); }
+.ask-input { margin-top: 12px; max-width: 220px; }
+.btn.danger-solid { background: var(--down); color: #fff; box-shadow: 0 3px 0 #8e2a20; }

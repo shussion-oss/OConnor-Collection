@@ -100,6 +100,42 @@
     toast._t = setTimeout(() => t.classList.remove('show'), 2600);
   }
 
+  /** In-page replacement for confirm()/prompt(): those are blocked in some embedded views
+      and look out of place on phones. Resolves to true / the typed text, or null if cancelled. */
+  function ask({ title, message = '', input = null, ok = 'OK', danger = false }) {
+    let dlg = $('#askDialog');
+    if (!dlg) {
+      dlg = document.createElement('dialog');
+      dlg.id = 'askDialog';
+      dlg.className = 'dialog ask';
+      document.body.appendChild(dlg);
+    }
+    dlg.innerHTML = `<form method="dialog" class="dialog-inner">
+        <h2 class="ask-title">${esc(title)}</h2>
+        ${message ? `<p class="help">${esc(message)}</p>` : ''}
+        ${input ? `<div class="money-input ask-input"><span>$</span><input name="v" inputmode="decimal" value="${esc(input.value ?? '')}" /></div>` : ''}
+        <div class="dialog-foot">
+          <span class="spacer"></span>
+          <button type="button" class="btn ghost" value="cancel" data-ask-cancel>Cancel</button>
+          <button type="submit" class="btn ${danger ? 'danger-solid' : 'primary'}">${esc(ok)}</button>
+        </div>
+      </form>`;
+    return new Promise((resolve) => {
+      const form = dlg.querySelector('form');
+      let result = null;
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        result = input ? form.v.value : true;
+        dlg.close();
+      });
+      dlg.querySelector('[data-ask-cancel]').onclick = () => dlg.close();
+      dlg.addEventListener('close', () => resolve(result), { once: true });
+      dlg.showModal();
+      const field = form.v;
+      if (field) { field.focus(); field.select(); }
+    });
+  }
+
   async function copy(text) {
     try {
       await navigator.clipboard.writeText(text);
@@ -152,6 +188,10 @@
     const saved = await DB.getSetting('settings');
     state.settings = { ...DEFAULT_SETTINGS, ...(saved || {}) };
     state.cards = await DB.allCards();
+    if (DB.temporary && !load.warned) {
+      load.warned = true;
+      setTimeout(() => toast('Preview mode: this browser blocks saving, so cards disappear when you close the page.'), 3500);
+    }
     applySettingsToHeader();
     render();
   }
@@ -591,7 +631,7 @@
   async function deleteCard() {
     const c = state.editing;
     if (!c) return;
-    if (!confirm(`Delete ${c.player} from the collection? This can't be undone.`)) return;
+    if (!(await ask({ title: `Delete ${c.player}?`, message: "This removes the card and its photos. It can't be undone.", ok: 'Delete', danger: true }))) return;
     await DB.deleteCard(c.id);
     if (c.frontImg) await DB.deleteImage(c.frontImg);
     if (c.backImg) await DB.deleteImage(c.backImg);
@@ -669,7 +709,7 @@
         <a class="btn ghost" href="${Listing.soldSearchUrl(c)}" target="_blank" rel="noopener">📈 See what similar cards sold for</a>
         ${store ? `<a class="btn ghost" href="${store}" target="_blank" rel="noopener">🏪 His eBay page</a>` : ''}
         <span class="spacer"></span>
-        <button class="btn ebay" data-go-ebay="${c.id}">Copy &amp; open eBay ↗</button>
+        <a class="btn ebay" href="${Listing.sellUrl()}" target="_blank" rel="noopener" data-go-ebay="${c.id}">Copy &amp; open eBay ↗</a>
       </div>`;
     hydrateImages($('#sellBody'));
     X().decorateSell?.(c, $('#sellBody'));
@@ -679,16 +719,15 @@
 
   async function goToEbay(id) {
     const title = $('#sellTitle').value;
-    // Open the window first (same click) so pop-up blockers allow it.
-    const w = window.open(Listing.sellUrl(), '_blank', 'noopener');
-    await copy(title);
+    // The button is a normal link, so eBay opens in a new tab on its own.
+    const copied = await copy(title);
     const c = state.cards.find((x) => x.id === id);
     await updateCard(id, {
       status: 'listed',
       listedAt: Date.now(),
       listing: { title, description: $('#sellDesc').value, startingBid: Number($('#sellBid').value) },
     });
-    toast(w ? 'Title copied. Paste it into eBay! 🏷️' : 'Title copied. Allow pop-ups to open eBay.');
+    toast(copied ? 'Title copied. Paste it into eBay! 🏷️' : 'eBay opened. Copy the title from here.');
     if ($('#detailDialog').open) openDetail(c.id);
   }
 
@@ -776,7 +815,7 @@
     try {
       const data = JSON.parse(await file.text());
       if (data.app !== 'the-dugout' || !Array.isArray(data.cards)) throw new Error('bad file');
-      if (!confirm(`Restore ${data.cards.length} cards? Cards with the same ID will be replaced.`)) return;
+      if (!(await ask({ title: `Restore ${data.cards.length} cards?`, message: 'Cards that are already here will be replaced by the backup copy.', ok: 'Restore' }))) return;
       for (const [key, dataUrl] of Object.entries(data.images || {})) {
         const blob = await (await fetch(dataUrl)).blob();
         await DB.putImage(key, blob);
@@ -952,7 +991,7 @@
         toast(ok ? 'Copied!' : 'Could not copy. Select the text and copy it yourself.');
       } else if (d.markSold) {
         const c = state.cards.find((x) => x.id === d.markSold);
-        const v = prompt(`What did ${c.player} sell for? ($)`, c.listing?.startingBid ?? '');
+        const v = await ask({ title: `What did ${c.player} sell for?`, input: { value: c.listing?.startingBid ?? '' }, ok: 'Mark as sold' });
         if (v === null) return;
         await updateCard(c.id, { status: 'sold', soldPrice: num(v.replace(/[$,]/g, '')), soldAt: Date.now() });
         toast(`Sold! 🎉 ${money(c.soldPrice)}`);
@@ -977,7 +1016,7 @@
 
   window.Dugout = {
     state, render, renderGrid, openEditor, openDetail, openSell, updateCard, toast, esc, money, uid,
-    imageUrl, hydrateImages, cardFaces, filteredCards, gain, copy, resizeImage, STATUS, load, openSettings, sportOf, eraOf,
+    imageUrl, hydrateImages, cardFaces, filteredCards, gain, copy, resizeImage, STATUS, load, openSettings, ask, sportOf, eraOf,
   };
 
   bind();
