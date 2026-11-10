@@ -469,3 +469,12 @@ h3.sub { font-size: 15px; margin: 18px 0 6px; }
 .ask-title { margin: 0 0 6px; font-family: var(--display); font-weight: 400; font-size: 22px; color: var(--field); }
 .ask-input { margin-top: 12px; max-width: 220px; }
 .btn.danger-solid { background: var(--down); color: #fff; box-shadow: 0 3px 0 #8e2a20; }
+
+/* sync status badge under the title */
+.sync-badge {
+  display: inline-block; margin-top: 4px; border: 0; cursor: pointer;
+  font: 600 11px var(--body); letter-spacing: .3px; padding: 3px 9px; border-radius: 999px;
+  background: rgba(255,255,255,.14); color: var(--chalk);
+}
+.sync-badge[data-state="synced"] { background: rgba(110,231,160,.18); color: #b8f5cf; }
+.sync-badge[data-state="offline"], .sync-badge[data-state="error"] { background: rgba(255,200,80,.2); color: #ffe2a0; }

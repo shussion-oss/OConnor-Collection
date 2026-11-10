@@ -541,14 +541,22 @@
     return rendering;
   }
 
-  async function init() {
+  // Re-read the family lists (called after every load, which may have pulled newer data).
+  async function reload() {
     ex.wants = (await DB.getSetting('wants')) || [];
     ex.sets = (await DB.getSetting('sets')) || [];
     ex.history = (await DB.getSetting('history')) || [];
     const saved = await DB.getSetting('badges');
     ex.badges = saved || {};
-    // Wait for the app's first load so we see the cards.
+    if ($('#wantsDialog')?.open) renderWants();
+    if ($('#setsDialog')?.open) renderSets();
+    return saved;
+  }
+
+  async function init() {
+    // Wait for the app's first load so we see the cards (and the family's latest data).
     await D.ready;
+    const saved = await reload();
     // First run after this update: quietly award what was already earned.
     if (!saved) await checkBadges({ silent: true });
     for (const s of ex.sets) if (setProgress(s).have >= s.total) s.completedAt ||= today();
@@ -614,6 +622,6 @@
     }
   }
 
-  window.DugoutExtras = { renderBinder, decorateDetail, decorateSell, decorateEditor, onCardSaved, afterRender, onSettingsOpen };
+  window.DugoutExtras = { renderBinder, decorateDetail, decorateSell, decorateEditor, onCardSaved, afterRender, onSettingsOpen, reload };
   init().catch((err) => console.error(err));
 })();

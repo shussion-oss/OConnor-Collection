@@ -42,5 +42,5 @@ const Online = (() => {
   const ebayAuthUrl = (familyCode, returnTo) => call('ebay', { familyCode, query: { action: 'auth-url', return_to: returnTo } });
   const ebayList = (familyCode, payload) => call('ebay', { familyCode, query: { action: 'list' }, body: payload });
 
-  return { configured, identify, ebayStatus, ebayAuthUrl, ebayList, blobToBase64 };
+  return { configured, call, identify, ebayStatus, ebayAuthUrl, ebayList, blobToBase64 };
 })();

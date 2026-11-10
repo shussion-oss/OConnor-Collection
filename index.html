@@ -20,6 +20,7 @@
       <div>
         <h1 id="collectionTitle">The Dugout</h1>
         <p class="tagline" id="collectionTagline">Our family baseball card collection</p>
+        <button type="button" class="sync-badge" id="syncBadge" hidden></button>
       </div>
     </div>
     <div class="top-actions">
@@ -103,7 +104,7 @@
   </main>
 
   <footer class="footer">
-    <span>Cards are saved on this device. Use <strong>Settings → Back up</strong> to keep a copy or move to another device.</span>
+    <span id="syncFooter">Cards are saved on this device. Use <strong>Settings → Back up</strong> to keep a copy or move to another device.</span>
   </footer>
 
   <!-- ============ Card detail ============ -->
@@ -345,6 +346,7 @@
   <script src="config.js"></script>
   <script src="db.js"></script>
   <script src="online.js"></script>
+  <script src="sync.js"></script>
   <script src="charts.js"></script>
   <script src="listing.js"></script>
   <script src="app.js"></script>

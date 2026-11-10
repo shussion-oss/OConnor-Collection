@@ -185,13 +185,16 @@
 
   // ---------- load ----------
   async function load() {
+    // Cards first: when this phone is in the family collection, this also pulls the latest
+    // family settings and lists from the server.
+    state.cards = await DB.allCards();
     const saved = await DB.getSetting('settings');
     state.settings = { ...DEFAULT_SETTINGS, ...(saved || {}) };
-    state.cards = await DB.allCards();
     if (DB.temporary && !load.warned) {
       load.warned = true;
       setTimeout(() => toast('Preview mode: this browser blocks saving, so cards disappear when you close the page.'), 3500);
     }
+    await X().reload?.();
     applySettingsToHeader();
     render();
   }

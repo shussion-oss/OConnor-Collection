@@ -1,7 +1,7 @@
 /* Tiny IndexedDB wrapper. Cards and photos are stored in the browser on this device.
    If the browser blocks storage (some private modes and embedded previews), it falls back
    to memory so the app still works. Nothing is saved after the page closes in that case. */
-const DB = (() => {
+const LocalDB = (() => {
   const NAME = 'dugout-cards';
   const VERSION = 1;
   const STORES = ['cards', 'images', 'settings'];
@@ -63,3 +63,6 @@ const DB = (() => {
     putSetting: (key, val) => tx('settings', 'readwrite', (s) => s.put(val, key), (m) => void m.set(key, structuredClone(val))),
   };
 })();
+
+// sync.js swaps this for a version that also keeps the shared family collection in step.
+var DB = LocalDB; // eslint-disable-line no-var

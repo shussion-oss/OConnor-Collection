@@ -24,8 +24,13 @@ A simple, good-looking web app for a dad and his sons to catalog, enjoy and sell
   - **Copy & open eBay** works with no setup.
   - **⚡ List it on eBay now** puts the auction up for you with both photos. This needs the online setup below.
 
-**Safe keeping**
-- Cards and photos are saved on the device. **Settings → Download backup** saves everything (cards, photos, chase list, sets, trophies, value history).
+**One family collection**
+- Every phone that enters the **family code** (Settings) sees the same cards, photos, chase list, sets, trophies and value history.
+- Each phone keeps a full copy, so the app opens instantly and works with no signal (at a card show, say). Changes made offline upload when the phone is back online.
+- Phones pick up each other's changes when the app opens, when you switch back to it, and every minute while it's open.
+- The badge under the title shows the status: ☁️ Family collection, 🔄 Syncing, ⚠️ Offline (with how many changes are waiting), or 📱 This phone only.
+- When a phone that already has cards joins, it asks whether to add them to the family collection.
+- **Settings → Download backup** still saves a full copy to a file.
 
 ## Running it
 No build step. It's plain HTML/CSS/JavaScript.
@@ -40,6 +45,7 @@ These run on a small [Supabase](https://supabase.com) backend in [`supabase/`](s
 | Piece | What it does |
 |---|---|
 | `functions/identify-card` | Sends the card photos to Claude (Anthropic's AI) and returns the card details |
+| `functions/collection` | The shared family collection: cards, photos (private bucket, signed links), settings and lists |
 | `functions/ebay` | Connects his eBay seller account (secure eBay sign-in) and creates the auction listing |
 | `migrations/…_init.sql` | eBay connection table + a public `listing-photos` storage bucket (eBay needs photo links) |
 
