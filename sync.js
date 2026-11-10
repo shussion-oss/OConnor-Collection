@@ -43,7 +43,7 @@
     const m = await meta();
     const waiting = m.cards.length + m.deleted.length + m.kv.length;
     const views = {
-      local: ['📱 This phone only', 'Cards are saved on this phone only. Enter the family code in Settings to share one collection with the whole family.'],
+      local: ['📱 Not shared yet · tap to share', 'Cards you add are only on this phone. Tap the badge at the top (or open Settings) and enter the family code so the whole family sees one collection.'],
       syncing: ['🔄 Syncing…', 'Syncing with the family collection…'],
       synced: ['☁️ Family collection', 'Everyone in the family sees this collection. It updates by itself.'],
       offline: [`⚠️ Offline${waiting ? ` · ${waiting} waiting` : ''}`, `Can't reach the family collection right now. ${waiting ? 'Your changes are saved on this phone and will upload when you are back online.' : 'Showing the copy saved on this phone.'}`],

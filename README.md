@@ -19,6 +19,7 @@ A simple, good-looking web app for a dad and his sons to catalog, enjoy and sell
 
 **Money**
 - **💰 Check sold prices** (on the Add/Edit card screen and on each card's page) searches for recent sales of that exact card (eBay sold listings, 130point, PSA auction records, price guides). It shows the **highest sale in the last 6 months**, the typical price, and every sale with its date and a link to check it. One tap uses either price as the estimated value. eBay has no public sold-price data, so this is a web search: always glance at the linked sales. The **See eBay sold listings** button opens eBay's own sold results, highest first.
+- **Check sold prices for all cards** (📈 Value screen) runs the same check for every card, or just the cards matching your filters. It does 3 at a time, skips cards checked in the last week, and shows the time and cost first. Values only change if you then tap **Set all to typical/highest sale** or **Use** on a card.
 - **Paid vs. worth:** what was paid, the estimated value and the gain or loss for every card, totaled on the scoreboard.
 - **📈 Value over time:** charts for each card and for the whole collection, plus a "Biggest winners" list. Use **Update value** on a card and check **Recent sales** to see what it actually sold for on eBay.
 - **Sell on eBay:** the app writes the title (under eBay's 80-character limit), the description and a suggested starting bid (70% of value by default).

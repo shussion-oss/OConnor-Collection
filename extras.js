@@ -304,7 +304,10 @@
 
   function openStats() {
     const body = $('#statsBody');
-    body.innerHTML = '';
+    body.innerHTML = Online.configured()
+      ? `<div class="bulk-cta"><button type="button" class="btn ai" id="bulkOpenBtn">💰 Check sold prices for all cards</button>
+         <span class="help">Looks up the highest and typical sale (last 6 months) for every card.</span></div>`
+      : '';
     const chart = Charts.lineChart(
       [
         { name: 'Worth', color: '#1f8a4c', points: ex.history.map((h) => ({ date: h.date, value: h.value })) },
@@ -367,13 +370,183 @@
   });
 
   // Saves a new estimated value and adds it to the card's value history.
-  async function setCardValue(c, value) {
+  async function setCardValue(c, value, { open = true } = {}) {
     const hist = [...(c.valueHistory || [])];
     if (hist.length && hist[hist.length - 1].date === today()) hist.pop();
     hist.push({ date: today(), value });
     await D.updateCard(c.id, { estValue: value, valueHistory: hist });
-    D.openDetail(c.id);
+    if (open) D.openDetail(c.id);
   }
+
+  // =====================================================================
+  // Bulk: check sold prices for many cards
+  // =====================================================================
+  const BULK_AT_ONCE = 3;
+  const bulk = { running: false, stop: false, rows: [], wake: null };
+
+  function bulkDialog() {
+    let dlg = $('#bulkDialog');
+    if (!dlg) {
+      dlg = document.createElement('dialog');
+      dlg.id = 'bulkDialog';
+      dlg.className = 'dialog wide';
+      dlg.innerHTML = `<div class="dialog-inner">
+        <div class="dialog-head"><h2>💰 Check sold prices for all cards</h2>
+          <button type="button" class="icon-btn" data-bulk-close aria-label="Close">✕</button></div>
+        <div id="bulkBody"></div></div>`;
+      document.body.appendChild(dlg);
+      dlg.addEventListener('cancel', (e) => { if (bulk.running) { e.preventDefault(); stopBulk(); } });
+    }
+    return dlg;
+  }
+
+  const recentlyChecked = (c, days = 7) =>
+    c.priceCheck?.checkedOn && (Date.now() - new Date(c.priceCheck.checkedOn + 'T00:00').getTime()) / 86400000 < days;
+
+  function bulkTargets(skipRecent) {
+    return D.filteredCards().filter((c) => c.status !== 'sold' && c.player && !(skipRecent && recentlyChecked(c)));
+  }
+
+  function openBulk() {
+    $('#statsDialog').close();
+    const dlg = bulkDialog();
+    renderBulkSetup(true);
+    dlg.showModal();
+  }
+
+  function renderBulkSetup(skipRecent) {
+    const all = D.filteredCards().filter((c) => c.status !== 'sold' && c.player);
+    const list = bulkTargets(skipRecent);
+    const filtered = all.length !== state.cards.filter((c) => c.status !== 'sold').length;
+    const mins = Math.max(1, Math.round((Math.ceil(list.length / BULK_AT_ONCE) * 45) / 60));
+    $('#bulkBody').innerHTML = `
+      <p>This looks up recent sales for <strong>${list.length} card${list.length === 1 ? '' : 's'}</strong>${filtered ? ' (the cards matching your current filters)' : ''}.
+        Values don't change until you choose to update them at the end.</p>
+      <label class="inline-check"><input type="checkbox" id="bulkSkip" ${skipRecent ? 'checked' : ''}/> Skip cards already checked in the last 7 days
+        <span class="help">(${all.length - bulkTargets(true).length} card${all.length - bulkTargets(true).length === 1 ? '' : 's'})</span></label>
+      <div class="bulk-estimate">
+        <div><span>Time</span><strong>about ${mins} min</strong></div>
+        <div><span>Cost on your AI key</span><strong>about $${(list.length * 0.05).toFixed(2)}–$${(list.length * 0.15).toFixed(2)}</strong></div>
+      </div>
+      <p class="help">Keep this screen open while it runs. It checks ${BULK_AT_ONCE} cards at a time, and you can stop at any point. Cards finished so far stay saved.</p>
+      <div class="dialog-foot"><span class="spacer"></span>
+        <button type="button" class="btn ghost" data-bulk-close>Cancel</button>
+        <button type="button" class="btn primary" id="bulkStartBtn" ${list.length ? '' : 'disabled'}>Start checking</button></div>`;
+    $('#bulkSkip').onchange = (e) => renderBulkSetup(e.target.checked);
+    $('#bulkStartBtn').onclick = () => startBulk(list);
+  }
+
+  const rowHtml = (row) => {
+    const c = row.card;
+    const name = `${esc(c.player)} <small class="meta">${esc([c.year, c.brand, c.cardNumber ? '#' + c.cardNumber : ''].filter(Boolean).join(' '))}</small>`;
+    let state = '<span class="help">waiting</span>';
+    if (row.status === 'checking') state = '<span class="help">🔎 checking…</span>';
+    if (row.status === 'error') state = `<span class="help">⚠️ ${esc(row.error)}</span>`;
+    if (row.status === 'none') state = '<span class="help">no recent sales found</span>';
+    if (row.status === 'done') {
+      const r = row.result;
+      state = `<span class="bulk-prices">top <a href="${esc(r.highest.url)}" target="_blank" rel="noopener"><b>${money(r.highest.price)}</b></a>
+        · typical <b>${money(r.typical)}</b> <span class="help">(${r.count})</span></span>
+        <button type="button" class="btn small ghost" data-bulk-use="${c.id}" data-price="${r.typical}">Use ${money(r.typical)}</button>`;
+    }
+    return `<li class="bulk-row status-${row.status}"><span class="bulk-name">${name}</span><span class="bulk-state">${state}</span></li>`;
+  };
+
+  function renderBulkProgress() {
+    const done = bulk.rows.filter((r) => !['waiting', 'checking'].includes(r.status)).length;
+    const found = bulk.rows.filter((r) => r.status === 'done');
+    const pct = Math.round((done / bulk.rows.length) * 100);
+    $('#bulkBody').innerHTML = `
+      <div class="bulk-status"><strong>${bulk.running ? (bulk.stop ? 'Stopping after the current cards…' : `Checking… ${done} of ${bulk.rows.length}`) : `Done: ${done} of ${bulk.rows.length} checked, ${found.length} with recent sales`}</strong></div>
+      <div class="progress"><i style="width:${pct}%"></i></div>
+      <ul class="bulk-list">${bulk.rows.map(rowHtml).join('')}</ul>
+      <div class="dialog-foot wrap">
+        ${bulk.running
+          ? `<span class="spacer"></span><button type="button" class="btn ghost" id="bulkStopBtn" ${bulk.stop ? 'disabled' : ''}>Stop</button>`
+          : `${found.length ? `<button type="button" class="btn ghost" data-bulk-all="typical">Set all ${found.length} to typical sale</button>
+             <button type="button" class="btn ghost" data-bulk-all="highest">Set all ${found.length} to highest sale</button>` : ''}
+             <span class="spacer"></span><button type="button" class="btn primary" data-bulk-close>Close</button>`}
+      </div>`;
+    const stopBtn = $('#bulkStopBtn');
+    if (stopBtn) stopBtn.onclick = stopBulk;
+  }
+
+  function stopBulk() {
+    bulk.stop = true;
+    renderBulkProgress();
+  }
+
+  async function startBulk(cards) {
+    const code = state.settings.familyCode;
+    if (!code) return toast('Enter the family code in Settings first.');
+    bulk.running = true;
+    bulk.stop = false;
+    bulk.rows = cards.map((card) => ({ card, status: 'waiting' }));
+    try { bulk.wake = await navigator.wakeLock?.request('screen'); } catch { bulk.wake = null; } // keep the phone awake
+    renderBulkProgress();
+
+    let next = 0;
+    const worker = async () => {
+      while (!bulk.stop && next < bulk.rows.length) {
+        const row = bulk.rows[next++];
+        row.status = 'checking';
+        renderBulkProgress();
+        try {
+          const r = await Online.priceCheck(code, row.card);
+          row.result = r;
+          row.status = r.count ? 'done' : 'none';
+          const fresh = state.cards.find((c) => c.id === row.card.id);
+          if (fresh) await D.updateCard(fresh.id, { priceCheck: summaryOf(r) });
+        } catch (err) {
+          row.status = 'error';
+          row.error = err.message;
+          if (/family code/i.test(err.message)) bulk.stop = true;
+        }
+        renderBulkProgress();
+      }
+    };
+    await Promise.all(Array.from({ length: BULK_AT_ONCE }, worker));
+    bulk.running = false;
+    try { await bulk.wake?.release(); } catch { /* already released */ }
+    renderBulkProgress();
+    const found = bulk.rows.filter((r) => r.status === 'done').length;
+    toast(`Price check finished: ${found} card${found === 1 ? '' : 's'} with recent sales.`);
+  }
+
+  document.addEventListener('click', async (e) => {
+    if (e.target.closest('#bulkOpenBtn')) return openBulk();
+    if (e.target.closest('[data-bulk-close]')) {
+      if (bulk.running) return stopBulk();
+      return $('#bulkDialog')?.close();
+    }
+    const one = e.target.closest('[data-bulk-use]');
+    if (one) {
+      const c = state.cards.find((x) => x.id === one.dataset.bulkUse);
+      if (c) {
+        await setCardValue(c, Number(one.dataset.price), { open: false });
+        one.outerHTML = `<span class="help">✅ set to ${money(Number(one.dataset.price))}</span>`;
+      }
+      return;
+    }
+    const all = e.target.closest('[data-bulk-all]');
+    if (all) {
+      const which = all.dataset.bulkAll;
+      const rows = bulk.rows.filter((r) => r.status === 'done');
+      const ok = await D.ask({
+        title: `Update ${rows.length} card value${rows.length === 1 ? '' : 's'}?`,
+        message: `Each card's estimated value becomes its ${which === 'typical' ? 'typical (middle) sale price' : 'highest sale price'} from the last 6 months. The value charts keep the old numbers.`,
+        ok: 'Update values',
+      });
+      if (!ok) return;
+      for (const row of rows) {
+        const c = state.cards.find((x) => x.id === row.card.id);
+        const value = which === 'typical' ? row.result.typical : row.result.highest.price;
+        if (c && value != null) await setCardValue(c, value, { open: false });
+      }
+      toast(`Updated ${rows.length} card value${rows.length === 1 ? '' : 's'} 📈`);
+      $$('#bulkBody [data-bulk-use]').forEach((b) => (b.outerHTML = '<span class="help">✅ updated</span>'));
+    }
+  });
 
   // =====================================================================
   // AI: fill in card details from photos
