@@ -1,6 +1,6 @@
 // Offline support: cache the app shell so it opens without internet.
-const CACHE = 'dugout-v1';
-const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'db.js', 'listing.js', 'manifest.json', 'icon.svg'];
+const CACHE = 'dugout-v2';
+const FILES = ['./', 'index.html', 'styles.css', 'config.js', 'db.js', 'online.js', 'charts.js', 'listing.js', 'app.js', 'extras.js', 'manifest.json', 'icon.svg'];
 self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES))));
 self.addEventListener('activate', (e) =>
   e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))))

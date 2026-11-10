@@ -22,6 +22,8 @@
     ],
   };
 
+  const EXTRA_KEYS = ['wants', 'sets', 'history', 'badges'];
+
   const STATUS = {
     collection: { label: 'In Collection', icon: '📒' },
     listed: { label: 'Listed on eBay', icon: '🏷️' },
@@ -36,7 +38,9 @@
     urls: new Map(), // image key -> object URL
     editing: null, // card being edited
     pendingImages: { front: null, back: null }, // Blobs picked in the form
+    view: 'grid', // 'grid' | 'binder'
   };
+  const X = () => window.DugoutExtras || {};
 
   // ---------- helpers ----------
   const esc = (s) =>
@@ -124,6 +128,7 @@
     renderChips();
     renderGrid();
     renderDatalists();
+    X().afterRender?.();
   }
 
   function renderScoreboard() {
@@ -244,6 +249,9 @@
     const grid = $('#cardGrid');
     $('#emptyState').hidden = state.cards.length !== 0;
     $('#noResults').hidden = !(state.cards.length && !list.length);
+    $$('[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === state.view));
+    grid.classList.toggle('binder-mode', state.view === 'binder');
+    if (state.view === 'binder' && X().renderBinder) return X().renderBinder(grid, list);
 
     grid.innerHTML = list
       .map((c) => {
@@ -351,11 +359,12 @@
         </div>
       </div>`;
     hydrateImages($('#detailBody'));
-    $('#detailDialog').showModal();
+    X().decorateDetail?.(c, $('#detailBody'));
+    if (!$('#detailDialog').open) $('#detailDialog').showModal();
   }
 
   // ---------- add / edit ----------
-  function openEditor(card) {
+  function openEditor(card, prefill) {
     state.editing = card || null;
     state.pendingImages = { front: null, back: null };
     const form = $('#cardForm');
@@ -380,6 +389,11 @@
         else if (card[el.name] != null) el.value = card[el.name];
       }
     }
+    if (!card && prefill) {
+      for (const [k, v] of Object.entries(prefill)) if (form.elements[k] && v != null) form.elements[k].value = v;
+    }
+    form.dataset.wantId = (!card && prefill?.wantId) || '';
+    X().decorateEditor?.(card);
     setPreview('front', card?.frontImg);
     setPreview('back', card?.backImg);
     $('#editDialog').showModal();
@@ -422,6 +436,7 @@
       grade: fd.get('grade').trim(),
       owner: fd.get('owner').trim(),
       categories: fd.getAll('cat'),
+      wantId: existing?.wantId || form.dataset.wantId || undefined,
       purchasePrice: num(fd.get('purchasePrice')),
       purchaseDate: fd.get('purchaseDate'),
       purchasedFrom: fd.get('purchasedFrom').trim(),
@@ -431,6 +446,14 @@
       updatedAt: Date.now(),
     };
     if (!card.player) return toast('Please enter the player name.');
+    // Keep a history of the estimated value so we can chart it over time.
+    const hist = [...(card.valueHistory || [])];
+    const today = new Date().toISOString().slice(0, 10);
+    if (card.estValue != null && (!hist.length || hist[hist.length - 1].value !== card.estValue)) {
+      if (hist.length && hist[hist.length - 1].date === today) hist.pop();
+      hist.push({ date: today, value: card.estValue });
+    }
+    card.valueHistory = hist;
 
     for (const side of ['front', 'back']) {
       const blob = state.pendingImages[side];
@@ -455,6 +478,7 @@
     render();
     toast(existing ? 'Card updated' : `${card.player} added to the collection! ⚾`);
     if ($('#detailDialog').open) openDetail(card.id);
+    X().onCardSaved?.(card, !existing);
   }
 
   async function deleteCard() {
@@ -476,6 +500,7 @@
     Object.assign(c, patch, { updatedAt: Date.now() });
     await DB.putCard(c);
     render();
+    X().onCardSaved?.(c, false);
     return c;
   }
 
@@ -540,6 +565,7 @@
         <button class="btn ebay" data-go-ebay="${c.id}">Copy &amp; open eBay ↗</button>
       </div>`;
     hydrateImages($('#sellBody'));
+    X().decorateSell?.(c, $('#sellBody'));
     $('#sellTitle').addEventListener('input', (e) => ($('#titleCount').textContent = e.target.value.length));
     $('#sellDialog').showModal();
   }
@@ -584,7 +610,10 @@
     f.shippingNote.value = s.shippingNote;
     f.bidPercent.value = s.bidPercent;
     f.categories.value = s.categories.join('\n');
+    f.familyCode.value = s.familyCode || '';
+    f.zip.value = s.zip || '';
     $('#settingsDialog').showModal();
+    X().onSettingsOpen?.();
   }
 
   async function saveSettings(e) {
@@ -598,6 +627,8 @@
       shippingNote: f.shippingNote.value.trim(),
       bidPercent: Number(f.bidPercent.value) || 70,
       categories: f.categories.value.split('\n').map((x) => x.trim()).filter(Boolean),
+      familyCode: f.familyCode.value.trim(),
+      zip: f.zip.value.trim(),
     };
     await DB.putSetting('settings', state.settings);
     applySettingsToHeader();
@@ -623,7 +654,9 @@
         if (blob) images[key] = await blobToDataUrl(blob);
       }
     }
-    const data = { app: 'the-dugout', version: 1, exportedAt: new Date().toISOString(), settings: state.settings, cards: state.cards, images };
+    const extras = {};
+    for (const k of EXTRA_KEYS) extras[k] = await DB.getSetting(k);
+    const data = { app: 'the-dugout', version: 2, exportedAt: new Date().toISOString(), settings: state.settings, cards: state.cards, images, extras };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
     a.download = `card-collection-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -643,6 +676,11 @@
       }
       for (const c of data.cards) await DB.putCard(c);
       if (data.settings) await DB.putSetting('settings', { ...state.settings, ...data.settings });
+      for (const k of EXTRA_KEYS) if (data.extras?.[k] != null) await DB.putSetting(k, data.extras[k]);
+      if (data.extras) {
+        // Reload so the chase list, sets, history and trophies pick up the restored data.
+        setTimeout(() => location.reload(), 1200);
+      }
       $('#settingsDialog').close();
       await load();
       toast(`Restored ${data.cards.length} cards`);
@@ -732,6 +770,12 @@
       state.sort = e.target.value;
       renderGrid();
     };
+    $$('[data-view]').forEach((b) =>
+      b.addEventListener('click', () => {
+        state.view = b.dataset.view;
+        renderGrid();
+      })
+    );
     $('#clearFiltersBtn').onclick = () => {
       state.filters = { q: '', category: '', owner: '', status: '' };
       $('#searchInput').value = '';
@@ -810,8 +854,13 @@
     );
   }
 
+  window.Dugout = {
+    state, render, renderGrid, openEditor, openDetail, openSell, updateCard, toast, esc, money, uid,
+    imageUrl, hydrateImages, cardFaces, filteredCards, gain, copy, resizeImage, STATUS, load, openSettings,
+  };
+
   bind();
-  load().catch((err) => {
+  window.Dugout.ready = load().catch((err) => {
     console.error(err);
     toast('Could not open the collection on this browser.');
   });

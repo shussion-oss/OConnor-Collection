@@ -23,7 +23,11 @@
       </div>
     </div>
     <div class="top-actions">
-      <button class="btn ghost" id="settingsBtn" title="Settings">⚙️ <span class="hide-sm">Settings</span></button>
+      <button class="btn ghost icon-only" id="trophyBtn" title="Trophy Case">🏆 <span class="hide-sm">Trophies</span><span class="badge-count" id="trophyCount"></span></button>
+      <button class="btn ghost icon-only" id="wantsBtn" title="Chase List">🎯 <span class="hide-sm">Chase List</span></button>
+      <button class="btn ghost icon-only" id="setsBtn" title="Set Checklists">📚 <span class="hide-sm">Sets</span></button>
+      <button class="btn ghost icon-only" id="statsBtn" title="Value over time">📈 <span class="hide-sm">Value</span></button>
+      <button class="btn ghost icon-only" id="settingsBtn" title="Settings">⚙️</button>
       <button class="btn primary" id="addCardBtn">＋ Add Card</button>
     </div>
   </header>
@@ -33,6 +37,10 @@
   <section class="controls">
     <div class="search-row">
       <input type="search" id="searchInput" placeholder="Search player, team, year, set…" aria-label="Search cards" />
+      <div class="view-toggle" role="group" aria-label="View">
+        <button type="button" data-view="grid" class="active">▦ Grid</button>
+        <button type="button" data-view="binder">📒 Binder</button>
+      </div>
       <select id="sortSelect" aria-label="Sort cards">
         <option value="newest">Newest added</option>
         <option value="player">Player A–Z</option>
@@ -103,6 +111,11 @@
           <img alt="" id="backPreview" hidden />
           <span class="photo-hint"><span class="big">📷</span>Back of card<small>Tap to take or choose a photo</small></span>
         </label>
+      </div>
+
+      <div class="ai-row" id="aiRow">
+        <button type="button" class="btn ai" id="aiFillBtn">✨ Fill in from photos</button>
+        <span class="help" id="aiStatus">Add a front photo (back helps too), then let the computer read the card.</span>
       </div>
 
       <div class="form-grid">
@@ -197,6 +210,23 @@
           <textarea name="categories" rows="7"></textarea>
         </label>
       </div>
+      <div class="settings-backup" id="onlineSettings">
+        <h3>🌐 Online features</h3>
+        <p class="help">Used for “Fill in from photos” and listing straight to eBay.</p>
+        <div class="form-grid one">
+          <label>Family code
+            <input name="familyCode" type="password" autocomplete="off" placeholder="The family code you set up" />
+            <small class="help">This keeps strangers from using your online features.</small>
+          </label>
+          <label>Ship-from ZIP code <small class="help">(eBay needs it for listings)</small>
+            <input name="zip" inputmode="numeric" maxlength="10" placeholder="e.g. 30301" />
+          </label>
+        </div>
+        <div class="row ebay-connect">
+          <span id="ebayStatus" class="help">eBay: not checked yet</span>
+          <button type="button" class="btn ghost small" id="ebayConnectBtn">🔗 Connect eBay account</button>
+        </div>
+      </div>
       <div class="settings-backup">
         <h3>Back up &amp; restore</h3>
         <p class="help">Photos and cards live on this device. Download a backup file now and then. You can also use it to move the collection to another phone or computer.</p>
@@ -213,10 +243,79 @@
     </form>
   </dialog>
 
+  <!-- ============ Trophies ============ -->
+  <dialog id="trophyDialog" class="dialog wide">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <h2>🏆 Trophy Case</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="help" id="trophySummary"></p>
+      <div class="trophies" id="trophyList"></div>
+    </div>
+  </dialog>
+
+  <!-- ============ Chase list ============ -->
+  <dialog id="wantsDialog" class="dialog wide">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <h2>🎯 Chase List</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="help">Cards we're hunting for. Bring this to the next card show! When you find one, tap <strong>Found it!</strong></p>
+      <form id="wantForm" class="want-form">
+        <input name="player" placeholder="Player *" required />
+        <input name="year" type="number" placeholder="Year" />
+        <input name="brand" placeholder="Brand / Set" list="brandList" />
+        <input name="cardNumber" placeholder="Card #" />
+        <input name="owner" placeholder="Who wants it?" list="ownerList" />
+        <input name="maxPrice" type="number" step="0.01" min="0" placeholder="Max $" />
+        <button class="btn primary small" type="submit">＋ Add</button>
+      </form>
+      <div class="chips" id="wantOwnerChips"></div>
+      <div id="wantList" class="want-list"></div>
+    </div>
+  </dialog>
+
+  <!-- ============ Sets ============ -->
+  <dialog id="setsDialog" class="dialog wide">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <h2>📚 Set Checklists</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="help">Working on a full set? Add it here and watch the progress bar fill up as you add cards. A card counts when its <strong>year</strong> and <strong>brand</strong> match the set.</p>
+      <form id="setForm" class="want-form">
+        <input name="year" type="number" placeholder="Year *" required />
+        <input name="brand" placeholder="Brand (e.g. Topps) *" required list="brandList" />
+        <input name="total" type="number" min="1" max="2000" placeholder="Cards in set *" required />
+        <input name="name" placeholder="Nickname (optional)" />
+        <button class="btn primary small" type="submit">＋ Add set</button>
+      </form>
+      <div id="setList" class="set-list"></div>
+    </div>
+  </dialog>
+
+  <!-- ============ Value over time ============ -->
+  <dialog id="statsDialog" class="dialog wide">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <h2>📈 Collection Value Over Time</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </div>
+      <div id="statsBody"></div>
+    </div>
+  </dialog>
+
+  <canvas id="confetti" aria-hidden="true" popover="manual"></canvas>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="config.js"></script>
   <script src="db.js"></script>
+  <script src="online.js"></script>
+  <script src="charts.js"></script>
   <script src="listing.js"></script>
   <script src="app.js"></script>
+  <script src="extras.js"></script>
 </body>
 </html>
