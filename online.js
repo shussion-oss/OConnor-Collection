@@ -38,9 +38,10 @@ const Online = (() => {
     return call('identify-card', { familyCode, body: { images } });
   }
 
+  const priceCheck = (familyCode, card) => call('price-check', { familyCode, body: { card } });
   const ebayStatus = (familyCode) => call('ebay', { familyCode, query: { action: 'status' } });
   const ebayAuthUrl = (familyCode, returnTo) => call('ebay', { familyCode, query: { action: 'auth-url', return_to: returnTo } });
   const ebayList = (familyCode, payload) => call('ebay', { familyCode, query: { action: 'list' }, body: payload });
 
-  return { configured, call, identify, ebayStatus, ebayAuthUrl, ebayList, blobToBase64 };
+  return { configured, call, identify, priceCheck, ebayStatus, ebayAuthUrl, ebayList, blobToBase64 };
 })();

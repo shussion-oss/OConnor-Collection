@@ -99,11 +99,12 @@ const Listing = (() => {
     return { bid, reason };
   }
 
-  function soldSearchUrl(card) {
+  /** eBay sold listings for this card. highestFirst sorts by price, highest at the top. */
+  function soldSearchUrl(card, { highestFirst = false } = {}) {
     const q = [card.year, card.brand, card.player, card.cardNumber ? `#${card.cardNumber}` : '', gradeText(card)]
       .filter(Boolean)
       .join(' ');
-    return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}&_sacat=213&LH_Sold=1&LH_Complete=1`;
+    return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}&_sacat=212&LH_Sold=1&LH_Complete=1${highestFirst ? '&_sop=16' : ''}`;
   }
 
   const sellUrl = () => 'https://www.ebay.com/sl/sell';

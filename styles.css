@@ -482,3 +482,16 @@ h3.sub { font-size: 15px; margin: 18px 0 6px; }
 /* one-tap names under "Belongs to" */
 .owner-picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 .owner-picks .chip { padding: 4px 12px; font-size: 13px; }
+
+/* =================== check sold prices =================== */
+.price-check { border: 2px dashed var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.price-check-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.price-result:empty { display: none; }
+.price-result p { margin: 4px 0; }
+.price-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: #fffaf0; border: 1px solid #f2d68a; border-radius: 10px; padding: 10px 12px; }
+.price-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.price-big { font: 700 28px 'Courier New', monospace; color: var(--up); }
+.price-typical { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 14px; }
+.price-sales { margin-top: 6px; font-size: 13px; }
+.price-sales summary { cursor: pointer; color: var(--muted); }
+.price-sales ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }

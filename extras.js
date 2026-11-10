@@ -222,7 +222,7 @@
           <span class="meta">${w.owner ? `For ${esc(w.owner)}` : ''}${w.maxPrice ? ` · up to ${money(w.maxPrice)}` : ''}${w.found ? ` · found ${new Date(w.found + 'T00:00').toLocaleDateString()} ✅` : ''}</span>
         </div>
         <div class="want-actions">
-          ${w.found ? '' : `<a class="btn small ghost" target="_blank" rel="noopener" href="https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}&_sacat=213">🔍 eBay</a>
+          ${w.found ? '' : `<a class="btn small ghost" target="_blank" rel="noopener" href="https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}&_sacat=212">🔍 eBay</a>
           <button class="btn small primary" data-want-found="${w.id}">Found it!</button>`}
           <button class="icon-btn" title="Remove" data-want-del="${w.id}">🗑</button>
         </div>
@@ -379,7 +379,81 @@
   function decorateEditor() {
     $('#aiRow').hidden = !Online.configured();
     $('#aiStatus').textContent = 'Add a front photo (back helps too), then let the computer read the card.';
+    $('#priceCheckBtn').hidden = !Online.configured();
+    const prev = state.editing?.priceCheck;
+    $('#priceResult').innerHTML = prev?.highest
+      ? `<p class="help">Last check (${fmtDay(prev.checkedOn)}): top sale ${money(prev.highest)}${prev.typical ? `, typical ${money(prev.typical)}` : ''}. Tap “Check sold prices” for fresh numbers.</p>`
+      : '';
+    updateSoldLink();
   }
+
+  // =====================================================================
+  // Check sold prices (highest sale in the last 6 months)
+  // =====================================================================
+  const fmtDay = (d) => (d ? new Date(d + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
+
+  function formCard() {
+    const f = $('#cardForm');
+    const v = (n) => (f.elements[n]?.value || '').trim();
+    return {
+      sport: v('sport'), player: v('player'), year: v('year') ? Number(v('year')) : null, brand: v('brand'),
+      cardNumber: v('cardNumber'), team: v('team'), gradeCompany: v('gradeCompany'), grade: v('grade'),
+      condition: v('condition'), categories: $$('#formCategories input[name=cat]:checked').map((i) => i.value),
+    };
+  }
+
+  function updateSoldLink() {
+    $('#soldLink').href = Listing.soldSearchUrl(formCard(), { highestFirst: true });
+  }
+
+  async function priceCheck() {
+    const card = formCard();
+    if (!card.player) return toast('Enter the player name first (or use “Fill in from photos”).');
+    const code = state.settings.familyCode;
+    if (!code) return toast('Enter the family code in Settings first.');
+    const out = $('#priceResult');
+    const btn = $('#priceCheckBtn');
+    btn.disabled = true;
+    out.innerHTML = `<p class="help">🔎 Searching sold listings for ${esc([card.year, card.brand, card.player].filter(Boolean).join(' '))}… this takes about 30–60 seconds.</p>`;
+    try {
+      const r = await Online.priceCheck(code, card);
+      $('#cardForm').dataset.priceCheck = JSON.stringify({
+        checkedOn: r.checkedOn, highest: r.highest?.price ?? null, typical: r.typical, count: r.count, url: r.highest?.url || '',
+      });
+      if (!r.count) {
+        out.innerHTML = `<p class="help">No sales of this exact card found in the last 6 months. ${esc(r.notes || '')}</p>
+          <p class="help">Try “See eBay sold listings”. eBay shows about the last 90 days.</p>`;
+        return;
+      }
+      const h = r.highest;
+      out.innerHTML = `
+        <div class="price-top">
+          <div>
+            <div class="price-label">🏆 Highest sale · last 6 months</div>
+            <div class="price-big">${money(h.price)}</div>
+            <div class="help">${fmtDay(h.date)} · ${esc(h.source)} · ${esc(h.condition)} · <a href="${esc(h.url)}" target="_blank" rel="noopener">see sale ↗</a></div>
+          </div>
+          <button type="button" class="btn small primary" data-use-price="${h.price}">Use ${money(h.price)}</button>
+        </div>
+        ${r.typical != null ? `<div class="price-typical"><span>Typical price: <strong>${money(r.typical)}</strong> <span class="help">(middle of ${r.count} sale${r.count === 1 ? '' : 's'})</span></span>
+          <button type="button" class="btn small ghost" data-use-price="${r.typical}">Use ${money(r.typical)}</button></div>` : ''}
+        <details class="price-sales"><summary>See all ${r.count} sale${r.count === 1 ? '' : 's'}</summary>
+          <ul>${r.sales.map((s) => `<li><b>${money(s.price)}</b> · ${fmtDay(s.date)} · ${esc(s.source)} · ${esc(s.condition)} · <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title.slice(0, 70))}</a></li>`).join('')}</ul>
+        </details>
+        ${r.notes ? `<p class="help">ℹ️ ${esc(r.notes)}</p>` : ''}`;
+    } catch (err) {
+      out.innerHTML = `<p class="help">⚠️ ${esc(err.message)} You can still check by hand with “See eBay sold listings”.</p>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const use = e.target.closest('[data-use-price]');
+    if (!use) return;
+    $('#cardForm').estValue.value = Number(use.dataset.usePrice).toFixed(2);
+    toast(`Estimated value set to ${money(Number(use.dataset.usePrice))}`);
+  });
 
   async function aiFill() {
     const code = state.settings.familyCode;
@@ -568,6 +642,10 @@
     $('#wantsBtn').onclick = () => { renderWants(); $('#wantsDialog').showModal(); };
     $('#setsBtn').onclick = () => { renderSets(); $('#setsDialog').showModal(); };
     $('#aiFillBtn').onclick = aiFill;
+    $('#priceCheckBtn').onclick = priceCheck;
+    $('#cardForm').addEventListener('input', updateSoldLink);
+    $('#cardForm').addEventListener('change', updateSoldLink);
+    $('#soldLink').addEventListener('click', updateSoldLink); // fields filled by AI don't fire input events
     $('#ebayConnectBtn').onclick = connectEbay;
 
     $('#wantForm').addEventListener('submit', async (e) => {

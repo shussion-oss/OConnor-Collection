@@ -196,6 +196,14 @@
         <label>Bought from<input name="purchasedFrom" placeholder="Card show, eBay, Grandpa…" /></label>
         <label>Estimated value ($)<input name="estValue" type="number" step="0.01" min="0" placeholder="0.00" /></label>
 
+        <div class="span-2 price-check">
+          <div class="price-check-row">
+            <button type="button" class="btn ai" id="priceCheckBtn">💰 Check sold prices</button>
+            <a class="btn small ghost" id="soldLink" href="https://www.ebay.com/sch/i.html" target="_blank" rel="noopener">See eBay sold listings ↗</a>
+          </div>
+          <div id="priceResult" class="price-result"></div>
+        </div>
+
         <label class="span-2">Description / story
           <textarea name="description" rows="3" placeholder="What makes this card special? Where did you find it?"></textarea>
         </label>

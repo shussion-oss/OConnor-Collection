@@ -18,6 +18,7 @@ A simple, good-looking web app for a dad and his sons to catalog, enjoy and sell
 - **📚 Set Checklists:** "1989 Upper Deck: 312 of 800" with a progress bar and a checklist of the numbers you still need.
 
 **Money**
+- **💰 Check sold prices** (on the Add/Edit card screen) searches for recent sales of that exact card (eBay sold listings, 130point, PSA auction records, price guides). It shows the **highest sale in the last 6 months**, the typical price, and every sale with its date and a link to check it. One tap uses either price as the estimated value. eBay has no public sold-price data, so this is a web search: always glance at the linked sales. The **See eBay sold listings** button opens eBay's own sold results, highest first.
 - **Paid vs. worth:** what was paid, the estimated value and the gain or loss for every card, totaled on the scoreboard.
 - **📈 Value over time:** charts for each card and for the whole collection, plus a "Biggest winners" list. Use **Update value** on a card and check **Recent sales** to see what it actually sold for on eBay.
 - **Sell on eBay:** the app writes the title (under eBay's 80-character limit), the description and a suggested starting bid (70% of value by default).
@@ -45,6 +46,7 @@ These run on a small [Supabase](https://supabase.com) backend in [`supabase/`](s
 | Piece | What it does |
 |---|---|
 | `functions/identify-card` | Sends the card photos to Claude (Anthropic's AI) and returns the card details |
+| `functions/price-check` | Finds recent sold prices for a card (Claude + web search) and works out the highest and typical sale |
 | `functions/collection` | The shared family collection: cards, photos (private bucket, signed links), settings and lists |
 | `functions/ebay` | Connects his eBay seller account (secure eBay sign-in) and creates the auction listing |
 | `migrations/…_init.sql` | eBay connection table + a public `listing-photos` storage bucket (eBay needs photo links) |

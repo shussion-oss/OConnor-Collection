@@ -462,6 +462,7 @@
       ['Condition', c.condition],
       ['Graded', c.gradeCompany ? `${c.gradeCompany} ${c.grade || ''}` : ''],
       ['Belongs to', c.owner],
+      ['Top recent sale', c.priceCheck?.highest ? `${money(c.priceCheck.highest)} (checked ${new Date(c.priceCheck.checkedOn + 'T00:00').toLocaleDateString()})` : ''],
       ['Bought from', c.purchasedFrom],
       ['Date bought', c.purchaseDate ? new Date(c.purchaseDate + 'T00:00').toLocaleDateString() : ''],
     ].filter(([, v]) => v);
@@ -548,6 +549,7 @@
       for (const [k, v] of Object.entries(prefill)) if (form.elements[k] && v != null) form.elements[k].value = v;
     }
     form.dataset.wantId = (!card && prefill?.wantId) || '';
+    form.dataset.priceCheck = '';
     X().decorateEditor?.(card);
     setPreview('front', card?.frontImg);
     setPreview('back', card?.backImg);
@@ -606,6 +608,7 @@
       estValue: num(fd.get('estValue')),
       description: fd.get('description').trim(),
       favorite: fd.get('favorite') === 'on',
+      priceCheck: form.dataset.priceCheck ? JSON.parse(form.dataset.priceCheck) : existing?.priceCheck,
       updatedAt: Date.now(),
     };
     if (!card.player) return toast('Please enter the player name.');
