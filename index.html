@@ -36,20 +36,39 @@
 
   <section class="controls">
     <div class="search-row">
-      <input type="search" id="searchInput" placeholder="Search player, team, year, set…" aria-label="Search cards" />
+      <input type="search" id="searchInput" placeholder="Search player, team, sport, year, set…" aria-label="Search cards" />
       <div class="view-toggle" role="group" aria-label="View">
         <button type="button" data-view="grid" class="active">▦ Grid</button>
         <button type="button" data-view="binder">📒 Binder</button>
       </div>
       <select id="sortSelect" aria-label="Sort cards">
-        <option value="newest">Newest added</option>
-        <option value="player">Player A–Z</option>
-        <option value="year-asc">Year (oldest first)</option>
-        <option value="year-desc">Year (newest first)</option>
-        <option value="value-desc">Value (high → low)</option>
-        <option value="paid-desc">Price paid (high → low)</option>
-        <option value="gain-desc">Biggest gain</option>
+        <optgroup label="Group by">
+          <option value="sport">Sport</option>
+          <option value="player">Player A–Z</option>
+          <option value="team">Team</option>
+          <option value="era">Era</option>
+          <option value="brand">Manufacturer</option>
+        </optgroup>
+        <optgroup label="Sort by">
+          <option value="newest" selected>Newest added</option>
+          <option value="year-asc">Year (oldest first)</option>
+          <option value="year-desc">Year (newest first)</option>
+          <option value="value-desc">Value (high → low)</option>
+          <option value="paid-desc">Price paid (high → low)</option>
+          <option value="gain-desc">Biggest gain</option>
+        </optgroup>
       </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Filter</span>
+      <div class="filter-selects" id="filterSelects">
+        <label><span>Sport</span><select data-filter="sport" aria-label="Filter by sport"></select></label>
+        <label><span>Player</span><select data-filter="player" aria-label="Filter by player"></select></label>
+        <label><span>Team</span><select data-filter="team" aria-label="Filter by team"></select></label>
+        <label><span>Era</span><select data-filter="era" aria-label="Filter by era"></select></label>
+        <label><span>Manufacturer</span><select data-filter="brand" aria-label="Filter by manufacturer"></select></label>
+        <button type="button" class="btn small ghost" id="resetFiltersBtn" hidden>✕ Clear</button>
+      </div>
     </div>
     <div class="filter-group">
       <span class="filter-label">Category</span>
@@ -73,7 +92,7 @@
       <p>Snap a photo of the front and back of a card to add it to the collection.</p>
       <div class="empty-actions">
         <button class="btn primary" id="emptyAddBtn">＋ Add your first card</button>
-        <button class="btn ghost" id="demoBtn">Load 3 sample cards</button>
+        <button class="btn ghost" id="demoBtn">Load 4 sample cards</button>
       </div>
     </div>
     <div class="empty" id="noResults" hidden>
@@ -119,7 +138,20 @@
       </div>
 
       <div class="form-grid">
-        <label class="span-2">Player name *<input name="player" required placeholder="e.g. Mickey Mantle" /></label>
+        <label>Player name *<input name="player" required placeholder="e.g. Mickey Mantle" /></label>
+        <label>Sport
+          <select name="sport">
+            <option>Baseball</option>
+            <option>Football</option>
+            <option>Basketball</option>
+            <option>Hockey</option>
+            <option>Soccer</option>
+            <option>Golf</option>
+            <option>Racing</option>
+            <option>Wrestling</option>
+            <option>Other</option>
+          </select>
+        </label>
         <label>Year<input name="year" type="number" min="1860" max="2100" placeholder="1987" /></label>
         <label>Brand / Set<input name="brand" placeholder="Topps, Fleer, Upper Deck…" list="brandList" /></label>
         <label>Card #<input name="cardNumber" placeholder="320" /></label>

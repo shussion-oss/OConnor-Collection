@@ -435,3 +435,31 @@ h3.sub { font-size: 15px; margin: 18px 0 6px; }
   /* the header wraps to two rows on phones, so let it scroll away instead of sticking */
   .topbar { position: static; }
 }
+
+/* =================== filter dropdowns + group headings =================== */
+.filter-selects { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; min-width: 0; }
+.filter-selects label { display: grid; gap: 2px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.filter-selects select { width: auto; max-width: 220px; padding: 7px 30px 7px 10px; font-size: 14px; border-radius: 999px; }
+.filter-selects select.active { border-color: var(--field); background-color: #e8f3ec; font-weight: 600; }
+.group-head {
+  grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin: 18px 0 -4px; padding-bottom: 6px; border-bottom: 3px solid var(--gold);
+  font-family: var(--display); font-weight: 400; font-size: 24px; color: var(--field);
+}
+.group-head:first-child { margin-top: 0; }
+.group-head small { font-family: var(--body); font-size: 14px; color: var(--muted); }
+.group-meta { font-family: var(--body); font-size: 14px; font-weight: 600; color: var(--muted); margin-left: auto; }
+
+@media (max-width: 720px) {
+  .filter-selects { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .filter-selects select { max-width: none; width: 100%; }
+  .group-head { font-size: 20px; }
+}
+
+[hidden] { display: none !important; }
+.chip { flex-shrink: 0; white-space: nowrap; }
+@media (max-width: 720px) {
+  .search-row .view-toggle { flex: 1 1 100%; }
+  .search-row .view-toggle button { flex: 1; padding: 10px; }
+  .search-row select { flex: 1 1 100%; }
+}

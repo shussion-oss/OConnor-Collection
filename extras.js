@@ -395,6 +395,7 @@
       const r = await Online.identify(code, front, back && /jpeg|png/.test(back.type) ? back : null);
       const f = $('#cardForm');
       const set = (name, v) => { if (v != null && v !== '' && f.elements[name] && !f.elements[name].value) f.elements[name].value = v; };
+      if (r.sport && f.sport && [...f.sport.options].some((o) => o.value === r.sport)) f.sport.value = r.sport;
       set('player', r.player); set('year', r.year); set('brand', r.brand); set('cardNumber', r.cardNumber);
       set('team', r.team); set('position', r.position); set('description', r.description);
       if (r.gradeCompany && !f.gradeCompany.value) { f.gradeCompany.value = r.gradeCompany; set('grade', r.grade); }
@@ -498,7 +499,7 @@
         durationDays: Number($('#sellDuration').value),
         zip: s.zip,
         card: {
-          player: card.player, year: card.year, brand: card.brand, cardNumber: card.cardNumber, team: card.team,
+          sport: card.sport || 'Baseball', player: card.player, year: card.year, brand: card.brand, cardNumber: card.cardNumber, team: card.team,
           position: card.position, condition: card.condition, gradeCompany: card.gradeCompany, grade: card.grade,
           categories: card.categories,
         },

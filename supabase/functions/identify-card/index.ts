@@ -1,4 +1,4 @@
-// Reads a baseball card from its photos and suggests the details for the "Add a Card" form.
+// Reads a sports card from its photos and suggests the details for the "Add a Card" form.
 // Secrets: ANTHROPIC_API_KEY, FAMILY_CODE
 import Anthropic from "npm:@anthropic-ai/sdk";
 
@@ -29,10 +29,14 @@ const SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: [
-    "player", "year", "brand", "cardNumber", "team", "position",
+    "sport", "player", "year", "brand", "cardNumber", "team", "position",
     "gradeCompany", "grade", "condition", "categories", "description",
   ],
   properties: {
+    sport: {
+      type: "string",
+      enum: ["Baseball", "Football", "Basketball", "Hockey", "Soccer", "Golf", "Racing", "Wrestling", "Other"],
+    },
     player: { type: "string", description: "Player's full name, or empty if unreadable" },
     year: { type: "string", description: "4-digit card year (copyright year on the back), or empty" },
     brand: { type: "string", description: "Manufacturer / set, e.g. Topps, Topps Chrome, Fleer, Upper Deck" },
@@ -47,7 +51,7 @@ const SCHEMA = {
   },
 };
 
-const SYSTEM = `You identify baseball trading cards from photos for a family's collection app (a dad and his sons).
+const SYSTEM = `You identify sports trading cards (mostly baseball) from photos for a family's collection app (a dad and his sons).
 Read only what the photos show: the name, team, set logo, card number, copyright year on the back, and any grading slab label.
 Leave a field as an empty string when you cannot read it or are unsure. Never guess a card number or year you cannot see.
 For an ungraded card, estimate "condition" from visible corners, edges, centering and surface. Leave it empty if the photo is too unclear.

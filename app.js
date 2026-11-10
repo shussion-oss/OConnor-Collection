@@ -24,6 +24,46 @@
 
   const EXTRA_KEYS = ['wants', 'sets', 'history', 'badges'];
 
+  // ---------- sport / era / grouping ----------
+  const SPORT_ICON = {
+    Baseball: '⚾', Football: '🏈', Basketball: '🏀', Hockey: '🏒', Soccer: '⚽',
+    Golf: '⛳', Racing: '🏁', Wrestling: '🤼', Other: '🃏',
+  };
+  const sportOf = (c) => c.sport || 'Baseball';
+  const sportIcon = (c) => SPORT_ICON[sportOf(c)] || '🃏';
+
+  // Collecting "eras" the hobby talks about.
+  const ERAS = [
+    { id: 'prewar', label: 'Pre-War', range: 'before 1946', test: (y) => y < 1946 },
+    { id: 'vintage', label: 'Post-War Vintage', range: '1946–1969', test: (y) => y <= 1969 },
+    { id: 'seventies', label: 'The Seventies', range: '1970–1979', test: (y) => y <= 1979 },
+    { id: 'junkwax', label: 'Junk Wax Era', range: '1980–1994', test: (y) => y <= 1994 },
+    { id: 'modern', label: 'Modern', range: '1995–2009', test: (y) => y <= 2009 },
+    { id: 'ultramodern', label: 'Ultra-Modern', range: '2010–today', test: () => true },
+  ];
+  const UNKNOWN_ERA = { id: 'unknown', label: 'Year Unknown', range: '' };
+  const eraOf = (c) => (c.year ? ERAS.find((e) => e.test(c.year)) : UNKNOWN_ERA);
+  const eraRank = (c) => (c.year ? ERAS.indexOf(eraOf(c)) : ERAS.length);
+
+  const norm = (v) => String(v || '').trim().toLowerCase();
+  // How each filter reads its value off a card (case-insensitive for typed-in fields).
+  const FILTER_FIELDS = {
+    sport: { label: 'All sports', get: (c) => sportOf(c) },
+    player: { label: 'All players', get: (c) => c.player },
+    team: { label: 'All teams', get: (c) => c.team },
+    era: { label: 'All eras', get: (c) => eraOf(c).id },
+    brand: { label: 'All makers', get: (c) => c.brand },
+  };
+
+  // Sorts that also group the grid under headings.
+  const GROUPS = {
+    sport: { key: (c) => sportOf(c), title: (c) => `${sportIcon(c)} ${sportOf(c)}`, rank: (c) => sportOf(c) },
+    player: { key: (c) => norm(c.player), title: (c) => c.player, rank: (c) => norm(c.player) },
+    team: { key: (c) => norm(c.team), title: (c) => c.team || 'No team listed', rank: (c) => (c.team ? norm(c.team) : '~') },
+    era: { key: (c) => eraOf(c).id, title: (c) => `${eraOf(c).label}${eraOf(c).range ? ` <small>${eraOf(c).range}</small>` : ''}`, rank: (c) => String(eraRank(c)).padStart(2, '0') },
+    brand: { key: (c) => norm(c.brand), title: (c) => c.brand || 'Unknown manufacturer', rank: (c) => (c.brand ? norm(c.brand) : '~') },
+  };
+
   const STATUS = {
     collection: { label: 'In Collection', icon: '📒' },
     listed: { label: 'Listed on eBay', icon: '🏷️' },
@@ -33,7 +73,7 @@
   const state = {
     cards: [],
     settings: { ...DEFAULT_SETTINGS },
-    filters: { q: '', category: '', owner: '', status: '' },
+    filters: { q: '', category: '', owner: '', status: '', sport: '', player: '', team: '', era: '', brand: '' },
     sort: 'newest',
     urls: new Map(), // image key -> object URL
     editing: null, // card being edited
@@ -187,11 +227,52 @@
       owners.map((o) => chip(o, f.owner === o, `data-owner="${esc(o)}"`)).join('');
     $('#ownerChips').closest('.filter-group').hidden = owners.length === 0;
 
+    renderFilterSelects();
+
     $('#statusChips').innerHTML =
       chip('All', !f.status, 'data-status=""') +
       Object.entries(STATUS)
         .map(([k, v]) => chip(`${v.icon} ${v.label}`, f.status === k, `data-status="${k}"`))
         .join('');
+  }
+
+  function renderFilterSelects() {
+    const f = state.filters;
+    for (const sel of $$('[data-filter]')) {
+      const field = sel.dataset.filter;
+      const { label, get } = FILTER_FIELDS[field];
+      const counts = new Map(); // normalized value -> { text, n }
+      // Only offer choices that still make sense with the other dropdowns (e.g. Football → football teams).
+      const base = state.cards.filter((c) =>
+        Object.keys(FILTER_FIELDS).every((k) => k === field || !f[k] || norm(FILTER_FIELDS[k].get(c)) === f[k]));
+      for (const c of base) {
+        const v = get(c);
+        if (!v) continue;
+        const k = norm(v);
+        const e = counts.get(k) || { text: v, n: 0 };
+        e.n++;
+        counts.set(k, e);
+      }
+      // Keep the current choice listed even if other filters now hide all its cards.
+      if (f[field] && !counts.has(f[field])) {
+        const any = state.cards.find((c) => norm(get(c)) === f[field]);
+        counts.set(f[field], { text: any ? get(any) : f[field], n: 0 });
+      }
+      let opts;
+      if (field === 'era') {
+        opts = [...ERAS, UNKNOWN_ERA]
+          .filter((e) => counts.has(e.id))
+          .map((e) => [e.id, `${e.label}${e.range ? ` (${e.range})` : ''} · ${counts.get(e.id).n}`]);
+      } else {
+        opts = [...counts.entries()]
+          .sort((a, b) => a[1].text.localeCompare(b[1].text))
+          .map(([k, e]) => [k, `${field === 'sport' ? (SPORT_ICON[e.text] || '') + ' ' : ''}${e.text} · ${e.n}`]);
+      }
+      sel.innerHTML = `<option value="">${label}</option>` +
+        opts.map(([v, t]) => `<option value="${esc(v)}" ${f[field] === v ? 'selected' : ''}>${esc(t)}</option>`).join('');
+      sel.classList.toggle('active', !!f[field]);
+    }
+    $('#resetFiltersBtn').hidden = !Object.keys(FILTER_FIELDS).some((k) => state.filters[k]);
   }
 
   function filteredCards() {
@@ -202,8 +283,11 @@
       if (category && category !== '__fav' && !(c.categories || []).includes(category)) return false;
       if (owner && c.owner !== owner) return false;
       if (status && (c.status || 'collection') !== status) return false;
+      for (const k of Object.keys(FILTER_FIELDS)) {
+        if (state.filters[k] && norm(FILTER_FIELDS[k].get(c)) !== state.filters[k]) return false;
+      }
       if (needle) {
-        const hay = [c.player, c.team, c.brand, c.year, c.cardNumber, c.position, c.owner, c.description, ...(c.categories || [])]
+        const hay = [c.player, c.team, sportOf(c), eraOf(c).label, c.brand, c.year, c.cardNumber, c.position, c.owner, c.description, ...(c.categories || [])]
           .join(' ')
           .toLowerCase();
         if (!needle.split(/\s+/).every((w) => hay.includes(w))) return false;
@@ -212,13 +296,20 @@
     });
     const by = {
       newest: (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
-      player: (a, b) => a.player.localeCompare(b.player),
       'year-asc': (a, b) => (a.year || 9999) - (b.year || 9999),
       'year-desc': (a, b) => (b.year || 0) - (a.year || 0),
       'value-desc': (a, b) => (b.estValue || 0) - (a.estValue || 0),
       'paid-desc': (a, b) => (b.purchasePrice || 0) - (a.purchasePrice || 0),
       'gain-desc': (a, b) => (gain(b) ?? -1e9) - (gain(a) ?? -1e9),
     }[state.sort];
+    const group = GROUPS[state.sort];
+    if (group) {
+      // Group first, then player, then year inside each group.
+      return list.sort((a, b) =>
+        group.rank(a).localeCompare(group.rank(b)) ||
+        norm(a.player).localeCompare(norm(b.player)) ||
+        (a.year || 9999) - (b.year || 9999));
+    }
     return list.sort(by);
   }
 
@@ -226,7 +317,7 @@
     return `<div class="flip ${size}" data-flip>
       <div class="flip-inner">
         <div class="face front" data-img="${esc(card.frontImg || '')}">
-          ${card.frontImg ? '' : `<div class="noimg"><span>⚾</span>${esc(card.player)}</div>`}
+          ${card.frontImg ? '' : `<div class="noimg"><span>${sportIcon(card)}</span>${esc(card.player)}</div>`}
         </div>
         <div class="face back" data-img="${esc(card.backImg || '')}">
           ${card.backImg ? '' : `<div class="noimg"><span>📄</span>No back photo yet</div>`}
@@ -253,18 +344,31 @@
     grid.classList.toggle('binder-mode', state.view === 'binder');
     if (state.view === 'binder' && X().renderBinder) return X().renderBinder(grid, list);
 
+    const group = GROUPS[state.sort];
+    let lastKey = null;
+    const heading = (c) => {
+      if (!group) return '';
+      const k = group.key(c);
+      if (k === lastKey) return '';
+      lastKey = k;
+      const members = list.filter((x) => group.key(x) === k);
+      const worth = members.reduce((s, x) => s + (x.estValue ?? x.purchasePrice ?? 0), 0);
+      return `<h2 class="group-head">${group.title(c)}
+        <span class="group-meta">${members.length} card${members.length === 1 ? '' : 's'}${worth ? ` · worth ${money(worth)}` : ''}</span></h2>`;
+    };
+
     grid.innerHTML = list
       .map((c) => {
         const st = c.status || 'collection';
         const g = gain(c);
-        return `<article class="card-tile status-${st}" data-id="${c.id}" tabindex="0">
+        return `${heading(c)}<article class="card-tile status-${st}" data-id="${c.id}" tabindex="0">
           ${cardFaces(c)}
           <button class="flip-btn" data-flip-btn title="Flip card" aria-label="Flip card">⟲</button>
           ${c.favorite ? '<span class="fav-badge" title="Favorite">⭐</span>' : ''}
           ${st !== 'collection' ? `<span class="status-badge">${STATUS[st].icon} ${STATUS[st].label}</span>` : ''}
           <div class="tile-info">
             <h3>${esc(c.player)}</h3>
-            <p class="meta">${esc([c.year, c.brand, c.cardNumber ? '#' + c.cardNumber : ''].filter(Boolean).join(' · '))}</p>
+            <p class="meta"><span title="${esc(sportOf(c))}">${sportIcon(c)}</span> ${esc([c.year, c.brand, c.cardNumber ? '#' + c.cardNumber : ''].filter(Boolean).join(' · '))}</p>
             <p class="meta team">${esc(c.team || '')}</p>
             <div class="price-row">
               <span>Paid <strong>${money(c.purchasePrice)}</strong></span>
@@ -303,6 +407,8 @@
       ['Brand / Set', c.brand],
       ['Card #', c.cardNumber],
       ['Team', c.team],
+      ['Sport', `${sportIcon(c)} ${sportOf(c)}`],
+      ['Era', `${eraOf(c).label}${eraOf(c).range ? ` (${eraOf(c).range})` : ''}`],
       ['Position', c.position],
       ['Condition', c.condition],
       ['Graded', c.gradeCompany ? `${c.gradeCompany} ${c.grade || ''}` : ''],
@@ -431,6 +537,7 @@
       cardNumber: fd.get('cardNumber').trim(),
       team: fd.get('team').trim(),
       position: fd.get('position').trim(),
+      sport: fd.get('sport') || 'Baseball',
       condition: fd.get('condition'),
       gradeCompany: fd.get('gradeCompany'),
       grade: fd.get('grade').trim(),
@@ -730,6 +837,8 @@
         cats: ['Vintage (pre-1980)', 'Hall of Famers'], owner: 'Jake', paid: 30, est: 22, cond: 'Very Good', story: 'Grandpa gave this to us. The corners are a little soft but it is a classic.', grade: '', company: '' },
       { player: 'Lefty Rivera', team: 'Desert Sun Sox', year: 2011, brand: 'Prime Picks', num: 42, pos: 'SS', c1: '#145a32', c2: '#27ae60',
         cats: ['Inserts & Parallels', 'Home Team'], owner: 'Tommy', paid: 8, est: 15, cond: '', story: 'Pulled from a pack on Tommy\'s birthday!', grade: '9', company: 'PSA' },
+      { player: 'Dash Thompson', team: 'Metro Mustangs', year: 1992, brand: 'Gridiron Gold', num: 88, pos: 'QB', c1: '#5b2c83', c2: '#9b59b6', sport: 'Football',
+        cats: ['Rookie Cards'], owner: 'Jake', paid: 3, est: 5, cond: 'Excellent', story: 'Our first football card! Traded two doubles for it at school.' },
     ];
     for (const d of demos) {
       const id = uid();
@@ -740,7 +849,7 @@
         id, createdAt: Date.now(), status: 'collection', player: d.player, year: d.year, brand: d.brand, cardNumber: String(d.num),
         team: d.team, position: d.pos, condition: d.cond, gradeCompany: d.company || '', grade: d.grade || '', owner: d.owner,
         categories: d.cats, purchasePrice: d.paid, purchaseDate: '', purchasedFrom: '', estValue: d.est, description: d.story,
-        favorite: !!d.fav, frontImg, backImg, sample: true,
+        favorite: !!d.fav, frontImg, backImg, sample: true, sport: d.sport || 'Baseball',
       };
       await DB.putCard(card);
     }
@@ -770,6 +879,18 @@
       state.sort = e.target.value;
       renderGrid();
     };
+    $$('[data-filter]').forEach((sel) =>
+      sel.addEventListener('change', () => {
+        state.filters[sel.dataset.filter] = sel.value;
+        renderChips();
+        renderGrid();
+      })
+    );
+    $('#resetFiltersBtn').onclick = () => {
+      for (const k of Object.keys(FILTER_FIELDS)) state.filters[k] = '';
+      renderChips();
+      renderGrid();
+    };
     $$('[data-view]').forEach((b) =>
       b.addEventListener('click', () => {
         state.view = b.dataset.view;
@@ -777,7 +898,7 @@
       })
     );
     $('#clearFiltersBtn').onclick = () => {
-      state.filters = { q: '', category: '', owner: '', status: '' };
+      state.filters = { q: '', category: '', owner: '', status: '', sport: '', player: '', team: '', era: '', brand: '' };
       $('#searchInput').value = '';
       render();
     };
@@ -856,7 +977,7 @@
 
   window.Dugout = {
     state, render, renderGrid, openEditor, openDetail, openSell, updateCard, toast, esc, money, uid,
-    imageUrl, hydrateImages, cardFaces, filteredCards, gain, copy, resizeImage, STATUS, load, openSettings,
+    imageUrl, hydrateImages, cardFaces, filteredCards, gain, copy, resizeImage, STATUS, load, openSettings, sportOf, eraOf,
   };
 
   bind();

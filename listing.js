@@ -20,7 +20,7 @@ const Listing = (() => {
       has(card, 'auto') ? 'Auto' : '',
       gradeText(card),
       card.team,
-      'Baseball Card',
+      card.sport && card.sport !== 'Other' ? `${card.sport} Card` : card.sport === 'Other' ? 'Trading Card' : 'Baseball Card',
     ].filter(Boolean);
 
     // Add words one at a time so we never cut a word in half at 80 chars.
@@ -50,6 +50,7 @@ const Listing = (() => {
     lines.push('');
 
     const details = [
+      ['Sport', card.sport || 'Baseball'],
       ['Player', card.player],
       ['Year', card.year],
       ['Manufacturer / Set', card.brand],

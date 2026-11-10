@@ -7,7 +7,9 @@ A simple, good-looking web app for a dad and his sons to catalog, enjoy and sell
 **Collect**
 - **Front & back photos** for every card. Snap them with a phone camera, then tap a card to flip it.
 - **✨ Fill in from photos:** the app reads the card from its photos and fills in player, year, set, card #, team, condition, categories and a fun description.
-- **Categories** (Rookie Cards, Hall of Famers, Vintage…), plus filters by collector (Dad, each son) and status.
+- **Sort & group by Sport, Player, Team, Era or Manufacturer.** Cards appear under headings with a count and value for each group. Eras follow the hobby's names: Pre-War, Post-War Vintage, the Seventies, the Junk Wax Era, Modern and Ultra-Modern.
+- **Filter dropdowns** for the same five. They narrow each other: pick Football and the team list shows only football teams.
+- **Categories** (Rookie Cards, Hall of Famers, Vintage…), plus filters by collector (Dad, each son) and status. Cards can be baseball, football, basketball, hockey and more.
 - **📒 Binder view:** flip through 9-pocket binder pages, just like the real thing. Pick a collector to see only their binder.
 
 **Have fun**

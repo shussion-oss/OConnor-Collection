@@ -126,7 +126,13 @@ function conditionFor(card: any) {
 
 // deno-lint-ignore no-explicit-any
 function aspectsFor(card: any) {
-  const a: Record<string, string[]> = { Sport: ["Baseball"], League: ["Major League (MLB)"] };
+  const sport = card.sport && card.sport !== "Other" ? String(card.sport) : "Baseball";
+  const a: Record<string, string[]> = { Sport: [sport] };
+  const LEAGUES: Record<string, string> = {
+    Baseball: "Major League (MLB)", Football: "National Football League (NFL)",
+    Basketball: "National Basketball Association (NBA)", Hockey: "National Hockey League (NHL)",
+  };
+  if (LEAGUES[sport]) a["League"] = [LEAGUES[sport]];
   const cats = (card.categories || []).map((c: string) => c.toLowerCase());
   if (card.player) a["Player/Athlete"] = [card.player];
   if (card.year) { a["Season"] = [String(card.year)]; a["Year Manufactured"] = [String(card.year)]; }
