@@ -1,6 +1,6 @@
-/* Filled in once the Supabase backend is deployed. The anon key is safe to publish:
+/* Supabase project for the online features. The publishable key is safe to publish:
    every online feature also requires the family code, which is checked on the server. */
 window.DUGOUT_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://mujfccyxipztmxxepphg.supabase.co',
+  supabaseAnonKey: 'sb_publishable_GvjfvXlwm_bULltW7Ri1CQ_qMlGysTj',
 };

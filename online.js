@@ -18,7 +18,6 @@ const Online = (() => {
       method: body ? 'POST' : 'GET',
       headers: {
         apikey: cfg().supabaseAnonKey,
-        Authorization: `Bearer ${cfg().supabaseAnonKey}`,
         'x-family-code': familyCode || '',
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
