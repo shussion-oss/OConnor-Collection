@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>The Dugout — Family Card Collection</title>
+  <meta name="theme-color" content="#0f2a1d" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-ball" aria-hidden="true">⚾</span>
+      <div>
+        <h1 id="collectionTitle">The Dugout</h1>
+        <p class="tagline" id="collectionTagline">Our family baseball card collection</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" id="settingsBtn" title="Settings">⚙️ <span class="hide-sm">Settings</span></button>
+      <button class="btn primary" id="addCardBtn">＋ Add Card</button>
+    </div>
+  </header>
+
+  <section class="scoreboard" id="scoreboard" aria-label="Collection stats"></section>
+
+  <section class="controls">
+    <div class="search-row">
+      <input type="search" id="searchInput" placeholder="Search player, team, year, set…" aria-label="Search cards" />
+      <select id="sortSelect" aria-label="Sort cards">
+        <option value="newest">Newest added</option>
+        <option value="player">Player A–Z</option>
+        <option value="year-asc">Year (oldest first)</option>
+        <option value="year-desc">Year (newest first)</option>
+        <option value="value-desc">Value (high → low)</option>
+        <option value="paid-desc">Price paid (high → low)</option>
+        <option value="gain-desc">Biggest gain</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Category</span>
+      <div class="chips" id="categoryChips"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Collector</span>
+      <div class="chips" id="ownerChips"></div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Status</span>
+      <div class="chips" id="statusChips"></div>
+    </div>
+  </section>
+
+  <main>
+    <div class="grid" id="cardGrid"></div>
+    <div class="empty" id="emptyState" hidden>
+      <div class="empty-art">🧢</div>
+      <h2>Batter up! Your binder is empty.</h2>
+      <p>Snap a photo of the front and back of a card to add it to the collection.</p>
+      <div class="empty-actions">
+        <button class="btn primary" id="emptyAddBtn">＋ Add your first card</button>
+        <button class="btn ghost" id="demoBtn">Load 3 sample cards</button>
+      </div>
+    </div>
+    <div class="empty" id="noResults" hidden>
+      <div class="empty-art">🔍</div>
+      <h2>No cards match those filters.</h2>
+      <button class="btn ghost" id="clearFiltersBtn">Clear filters</button>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span>Cards are saved on this device. Use <strong>Settings → Back up</strong> to keep a copy or move to another device.</span>
+  </footer>
+
+  <!-- ============ Card detail ============ -->
+  <dialog id="detailDialog" class="dialog wide">
+    <div class="dialog-inner" id="detailBody"></div>
+  </dialog>
+
+  <!-- ============ Add / edit card ============ -->
+  <dialog id="editDialog" class="dialog wide">
+    <form method="dialog" id="cardForm" class="dialog-inner">
+      <div class="dialog-head">
+        <h2 id="editTitle">Add a Card</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </div>
+
+      <div class="photo-pickers">
+        <label class="photo-pick" id="frontPick">
+          <input type="file" accept="image/*" id="frontInput" hidden />
+          <img alt="" id="frontPreview" hidden />
+          <span class="photo-hint"><span class="big">📷</span>Front of card<small>Tap to take or choose a photo</small></span>
+        </label>
+        <label class="photo-pick" id="backPick">
+          <input type="file" accept="image/*" id="backInput" hidden />
+          <img alt="" id="backPreview" hidden />
+          <span class="photo-hint"><span class="big">📷</span>Back of card<small>Tap to take or choose a photo</small></span>
+        </label>
+      </div>
+
+      <div class="form-grid">
+        <label class="span-2">Player name *<input name="player" required placeholder="e.g. Mickey Mantle" /></label>
+        <label>Year<input name="year" type="number" min="1860" max="2100" placeholder="1987" /></label>
+        <label>Brand / Set<input name="brand" placeholder="Topps, Fleer, Upper Deck…" list="brandList" /></label>
+        <label>Card #<input name="cardNumber" placeholder="320" /></label>
+        <label>Team<input name="team" placeholder="New York Yankees" list="teamList" /></label>
+        <label>Position<input name="position" placeholder="CF" /></label>
+        <label>Condition
+          <select name="condition">
+            <option value="">—</option>
+            <option>Gem Mint</option>
+            <option>Mint</option>
+            <option>Near Mint-Mint</option>
+            <option>Near Mint</option>
+            <option>Excellent</option>
+            <option>Very Good</option>
+            <option>Good</option>
+            <option>Fair</option>
+            <option>Poor</option>
+          </select>
+        </label>
+        <label>Graded by
+          <select name="gradeCompany">
+            <option value="">Not graded (raw)</option>
+            <option>PSA</option>
+            <option>BGS</option>
+            <option>SGC</option>
+            <option>CGC</option>
+          </select>
+        </label>
+        <label>Grade<input name="grade" placeholder="e.g. 9" /></label>
+        <label>Belongs to<input name="owner" placeholder="Dad, Jake, Tommy…" list="ownerList" /></label>
+
+        <fieldset class="span-2 cat-field">
+          <legend>Categories <small>(pick all that apply)</small></legend>
+          <div class="chips selectable" id="formCategories"></div>
+        </fieldset>
+
+        <label>Price paid ($)<input name="purchasePrice" type="number" step="0.01" min="0" placeholder="0.00" /></label>
+        <label>Date bought<input name="purchaseDate" type="date" /></label>
+        <label>Bought from<input name="purchasedFrom" placeholder="Card show, eBay, Grandpa…" /></label>
+        <label>Estimated value ($)<input name="estValue" type="number" step="0.01" min="0" placeholder="0.00" /></label>
+
+        <label class="span-2">Description / story
+          <textarea name="description" rows="3" placeholder="What makes this card special? Where did you find it?"></textarea>
+        </label>
+        <label class="span-2 inline-check"><input type="checkbox" name="favorite" /> ⭐ Mark as a favorite</label>
+      </div>
+
+      <datalist id="brandList"></datalist>
+      <datalist id="teamList"></datalist>
+      <datalist id="ownerList"></datalist>
+
+      <div class="dialog-foot">
+        <button type="button" class="btn danger ghost" id="deleteCardBtn" hidden>Delete card</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary" id="saveCardBtn">Save Card</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ============ Sell on eBay ============ -->
+  <dialog id="sellDialog" class="dialog wide">
+    <div class="dialog-inner" id="sellBody"></div>
+  </dialog>
+
+  <!-- ============ Settings ============ -->
+  <dialog id="settingsDialog" class="dialog">
+    <form method="dialog" class="dialog-inner" id="settingsForm">
+      <div class="dialog-head">
+        <h2>Settings</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="form-grid one">
+        <label>Collection name<input name="title" placeholder="The Dugout" /></label>
+        <label>Tagline<input name="tagline" placeholder="Our family baseball card collection" /></label>
+        <label>eBay username
+          <input name="ebayUser" placeholder="his-ebay-username" autocomplete="off" />
+          <small class="help">Used for the “Sell on eBay” button and the link to his eBay store.</small>
+        </label>
+        <label>Shipping note for listings
+          <input name="shippingNote" />
+        </label>
+        <label>Starting bid as % of estimated value
+          <input name="bidPercent" type="number" min="1" max="200" />
+          <small class="help">The suggested starting bid. You can always change it before listing.</small>
+        </label>
+        <label>Categories <small class="help">(one per line)</small>
+          <textarea name="categories" rows="7"></textarea>
+        </label>
+      </div>
+      <div class="settings-backup">
+        <h3>Back up &amp; restore</h3>
+        <p class="help">Photos and cards live on this device. Download a backup file now and then. You can also use it to move the collection to another phone or computer.</p>
+        <div class="row">
+          <button type="button" class="btn ghost" id="exportBtn">⬇️ Download backup</button>
+          <label class="btn ghost">⬆️ Restore backup<input type="file" accept="application/json,.json" id="importInput" hidden /></label>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary">Save Settings</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="db.js"></script>
+  <script src="listing.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "The Dugout: Family Card Collection",
+  "short_name": "The Dugout",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f2a1d",
+  "theme_color": "#0f2a1d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
