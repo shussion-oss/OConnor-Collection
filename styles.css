@@ -495,3 +495,7 @@ h3.sub { font-size: 15px; margin: 18px 0 6px; }
 .price-sales { margin-top: 6px; font-size: 13px; }
 .price-sales summary { cursor: pointer; color: var(--muted); }
 .price-sales ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* detail page: price check results inside "Value over time" */
+.value-section .price-result:not(:empty) { margin: 4px 0 10px; }
+.value-head > div { flex-wrap: wrap; }
