@@ -23,6 +23,8 @@
   };
 
   const EXTRA_KEYS = ['wants', 'sets', 'history', 'badges'];
+  // Names suggested for "Belongs to" (plus anyone else already used in the collection).
+  const FAMILY = ['Joe', 'Joey', 'Ethan'];
 
   // ---------- sport / era / grouping ----------
   const SPORT_ICON = {
@@ -432,7 +434,11 @@
         .join(''));
     fill('#brandList', 'brand');
     fill('#teamList', 'team');
-    fill('#ownerList', 'owner');
+    const owners = [...new Set([...FAMILY, ...state.cards.map((c) => c.owner).filter(Boolean)])];
+    $('#ownerList').innerHTML = owners.map((v) => `<option value="${esc(v)}"></option>`).join('');
+    $('#ownerPicks').innerHTML = owners
+      .map((v) => `<button type="button" class="chip" data-pick-owner="${esc(v)}">${esc(v)}</button>`)
+      .join('');
     if (!$('#brandList').innerHTML)
       $('#brandList').innerHTML = ['Topps', 'Bowman', 'Fleer', 'Donruss', 'Upper Deck', 'Score', 'Panini', 'Leaf']
         .map((b) => `<option value="${b}"></option>`)
@@ -545,7 +551,14 @@
     X().decorateEditor?.(card);
     setPreview('front', card?.frontImg);
     setPreview('back', card?.backImg);
+    syncOwnerPicks();
     $('#editDialog').showModal();
+  }
+
+  // Highlight the name button that matches what's typed in "Belongs to".
+  function syncOwnerPicks() {
+    const v = $('#cardForm').owner.value.trim().toLowerCase();
+    $$('#ownerPicks .chip').forEach((c) => c.classList.toggle('active', c.dataset.pickOwner.toLowerCase() === v));
   }
 
   async function setPreview(side, key, blob) {
@@ -874,13 +887,13 @@
   async function loadDemo() {
     const demos = [
       { player: 'Sammy Fastball', team: 'River City Comets', year: 1989, brand: 'Diamond Classics', num: 116, pos: 'P', c1: '#0b3d91', c2: '#3a7bd5',
-        cats: ['Rookie Cards', 'Superstars'], owner: 'Dad', paid: 12, est: 45, cond: 'Near Mint', story: 'Found this one in a shoebox at a garage sale. Best $12 ever spent!', fav: true },
+        cats: ['Rookie Cards', 'Superstars'], owner: 'Joe', paid: 12, est: 45, cond: 'Near Mint', story: 'Found this one in a shoebox at a garage sale. Best $12 ever spent!', fav: true },
       { player: 'Joe Homerun', team: 'Lakeside Lumberjacks', year: 1975, brand: 'Old Timer', num: 7, pos: '1B', c1: '#7a1f1f', c2: '#c0392b',
-        cats: ['Vintage (pre-1980)', 'Hall of Famers'], owner: 'Jake', paid: 30, est: 22, cond: 'Very Good', story: 'Grandpa gave this to us. The corners are a little soft but it is a classic.', grade: '', company: '' },
+        cats: ['Vintage (pre-1980)', 'Hall of Famers'], owner: 'Joey', paid: 30, est: 22, cond: 'Very Good', story: 'Grandpa gave this to us. The corners are a little soft but it is a classic.', grade: '', company: '' },
       { player: 'Lefty Rivera', team: 'Desert Sun Sox', year: 2011, brand: 'Prime Picks', num: 42, pos: 'SS', c1: '#145a32', c2: '#27ae60',
-        cats: ['Inserts & Parallels', 'Home Team'], owner: 'Tommy', paid: 8, est: 15, cond: '', story: 'Pulled from a pack on Tommy\'s birthday!', grade: '9', company: 'PSA' },
+        cats: ['Inserts & Parallels', 'Home Team'], owner: 'Ethan', paid: 8, est: 15, cond: '', story: 'Pulled from a pack on Ethan\'s birthday!', grade: '9', company: 'PSA' },
       { player: 'Dash Thompson', team: 'Metro Mustangs', year: 1992, brand: 'Gridiron Gold', num: 88, pos: 'QB', c1: '#5b2c83', c2: '#9b59b6', sport: 'Football',
-        cats: ['Rookie Cards'], owner: 'Jake', paid: 3, est: 5, cond: 'Excellent', story: 'Our first football card! Traded two doubles for it at school.' },
+        cats: ['Rookie Cards'], owner: 'Joey', paid: 3, est: 5, cond: 'Excellent', story: 'Our first football card! Traded two doubles for it at school.' },
     ];
     for (const d of demos) {
       const id = uid();
@@ -906,6 +919,7 @@
     $('#demoBtn').onclick = loadDemo;
     $('#settingsBtn').onclick = openSettings;
     $('#cardForm').addEventListener('submit', saveCard);
+    $('#cardForm').owner.addEventListener('input', syncOwnerPicks);
     $('#settingsForm').addEventListener('submit', saveSettings);
     $('#deleteCardBtn').onclick = deleteCard;
     $('#frontInput').onchange = (e) => onPhotoPicked('front', e.target.files[0]);
@@ -947,6 +961,12 @@
 
     document.addEventListener('click', async (e) => {
       const t = e.target;
+      const pick = t.closest('[data-pick-owner]');
+      if (pick) {
+        $('#cardForm').owner.value = pick.dataset.pickOwner;
+        $$('#ownerPicks .chip').forEach((c) => c.classList.toggle('active', c === pick));
+        return;
+      }
       const chipEl = t.closest('.chip[data-cat], .chip[data-owner], .chip[data-status]');
       if (chipEl) {
         if ('cat' in chipEl.dataset) state.filters.category = chipEl.dataset.cat;

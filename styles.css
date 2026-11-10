@@ -478,3 +478,7 @@ h3.sub { font-size: 15px; margin: 18px 0 6px; }
 }
 .sync-badge[data-state="synced"] { background: rgba(110,231,160,.18); color: #b8f5cf; }
 .sync-badge[data-state="offline"], .sync-badge[data-state="error"] { background: rgba(255,200,80,.2); color: #ffe2a0; }
+
+/* one-tap names under "Belongs to" */
+.owner-picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.owner-picks .chip { padding: 4px 12px; font-size: 13px; }
